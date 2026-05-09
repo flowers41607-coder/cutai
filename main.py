@@ -1,6 +1,7 @@
 import os
 import uuid
 import asyncio
+import subprocess
 from pathlib import Path
 from contextlib import asynccontextmanager
 
@@ -18,11 +19,32 @@ jobs: dict = {}
 async def lifespan(app: FastAPI):
     for d in ("temp", "uploads", "outputs"):
         os.makedirs(d, exist_ok=True)
+    # Log FFmpeg status on startup
+    import shutil
+    ff = shutil.which("ffmpeg")
+    print(f"[startup] FFmpeg path: {ff}")
+    if ff:
+        r = subprocess.run([ff, "-version"], capture_output=True, text=True)
+        print(f"[startup] FFmpeg version: {r.stdout.splitlines()[0] if r.stdout else 'unknown'}")
+    else:
+        print("[startup] WARNING: FFmpeg not found!")
     yield
 
 app = FastAPI(title="cut.ai", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"],
                    allow_methods=["*"], allow_headers=["*"])
+
+
+@app.get("/api/health")
+async def health():
+    import shutil
+    ff = shutil.which("ffmpeg")
+    fp = shutil.which("ffprobe")
+    return {
+        "ffmpeg": ff or "NOT FOUND",
+        "ffprobe": fp or "NOT FOUND",
+        "pydub": True,
+    }
 
 
 @app.post("/api/upload")
