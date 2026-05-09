@@ -1,0 +1,5 @@
+[build]
+builder = "nixpacks"
+
+[build.nixpacksPlan.phases.setup]
+nixPkgs = ["ffmpeg", "python311"]
